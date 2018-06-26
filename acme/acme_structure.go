@@ -406,6 +406,25 @@ func mapEnvironmentVariableValues(keyMapping map[string]string) {
 	}
 }
 
+func toRoute53Config(m map[string]interface{}) *route53.Config {
+	cfg := route53.NewDefaultConfig()
+
+	if v, ok := m["max_retries"]; ok {
+		cfg.MaxRetries = v.(int)
+	}
+	if v, ok := m["route53_ttl"]; ok {
+		cfg.Route53TTL = v.(int)
+	}
+	if v, ok := m["propagation_timeout"]; ok {
+		cfg.PropagationTimeout = time.Duration(v.(int)) * time.Second
+	}
+	if v, ok := m["polling_interval"]; ok {
+		cfg.PollingInterval = time.Duration(v.(int)) * time.Second
+	}
+
+	return cfg
+}
+
 // setDNSChallenge takes an *acme.Client and the DNS challenge complex
 // structure as a map[string]interface{}, and configues the client to only
 // allow a DNS challenge with the configured provider.
@@ -485,7 +504,11 @@ func setDNSChallenge(client *acme.Client, m map[string]interface{}) error {
 	case "rackspace":
 		provider, err = rackspace.NewDNSProvider()
 	case "route53":
-		provider, err = route53.NewDNSProvider()
+		cfg := route53.NewDefaultConfig()
+		if v, ok := m["config"]; ok {
+			cfg = toRoute53Config(v.(map[string]interface{}))
+		}
+		provider, err = route53.NewDNSProvider(cfg)
 	case "rfc2136":
 		provider, err = rfc2136.NewDNSProvider()
 	case "vultr":
