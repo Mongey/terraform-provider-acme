@@ -11,5 +11,6 @@
   name = "github.com/terraform-providers/terraform-provider-tls"
 
 [[constraint]]
-  version = "v1.0.1"
   name = "github.com/xenolf/lego"
+  source = "github.com/Mongey/lego"
+  branch = "cm-add-config"
