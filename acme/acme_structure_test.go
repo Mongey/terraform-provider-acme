@@ -370,10 +370,10 @@ func TestACME_mapEnvironmentVariableValues(t *testing.T) {
 
 func TestACME_route53config(t *testing.T) {
 	m := map[string]interface{}{
-		"max_retries":         1,
-		"route53_ttl":         100,
-		"propagation_timeout": 600,
-		"polling_interval":    2,
+		"max_retries":         "1",
+		"route53_ttl":         "100",
+		"propagation_timeout": "600",
+		"polling_interval":    "2",
 	}
 	expected := &route53.Config{
 		MaxRetries:         1,

@@ -7,8 +7,10 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
@@ -129,10 +131,10 @@ func certificateSchema() map[string]*schema.Schema {
 						Required: true,
 					},
 					"config": &schema.Schema{
-						Type:     schema.TypeMap,
-						Optional: true,
-						//ValidateFunc: validateDNSChallengeConfig,
-						Sensitive: true,
+						Type:         schema.TypeMap,
+						Optional:     true,
+						ValidateFunc: validateDNSChallengeConfig,
+						Sensitive:    true,
 					},
 				},
 			},
@@ -410,16 +412,40 @@ func toRoute53Config(m map[string]interface{}) *route53.Config {
 	cfg := route53.NewDefaultConfig()
 
 	if v, ok := m["max_retries"]; ok {
-		cfg.MaxRetries = v.(int)
+		s := v.(string)
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			log.Printf("[WARN] Could not convert %v to integer %s", v, err)
+		} else {
+			cfg.MaxRetries = i
+		}
 	}
 	if v, ok := m["route53_ttl"]; ok {
-		cfg.Route53TTL = v.(int)
+		s := v.(string)
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			log.Printf("[WARN] Could not convert %v to integer %s", v, err)
+		} else {
+			cfg.Route53TTL = i
+		}
 	}
 	if v, ok := m["propagation_timeout"]; ok {
-		cfg.PropagationTimeout = time.Duration(v.(int)) * time.Second
+		s := v.(string)
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			log.Printf("[WARN] Could not convert %v to integer %s", v, err)
+		} else {
+			cfg.PropagationTimeout = time.Duration(i) * time.Second
+		}
 	}
 	if v, ok := m["polling_interval"]; ok {
-		cfg.PollingInterval = time.Duration(v.(int)) * time.Second
+		s := v.(string)
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			log.Printf("[WARN] Could not convert %v to integer %s", v, err)
+		} else {
+			cfg.PollingInterval = time.Duration(i) * time.Second
+		}
 	}
 
 	return cfg
@@ -508,6 +534,7 @@ func setDNSChallenge(client *acme.Client, m map[string]interface{}) error {
 		if v, ok := m["config"]; ok {
 			cfg = toRoute53Config(v.(map[string]interface{}))
 		}
+		log.Printf("[WARN] Setting ROUTE53Config to %v", cfg)
 		provider, err = route53.NewDNSProvider(cfg)
 	case "rfc2136":
 		provider, err = rfc2136.NewDNSProvider()
