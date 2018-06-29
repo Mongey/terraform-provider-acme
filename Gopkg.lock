@@ -567,7 +567,7 @@
     "providers/dns/route53",
     "providers/dns/vultr"
   ]
-  revision = "5eebcea5566ed1ea823108e06232ea48d032b99b"
+  revision = "351aed221e1df7e68143b9d95ddaa424c0e93379"
   source = "github.com/Mongey/lego"
 
 [[projects]]

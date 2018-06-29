@@ -17,18 +17,19 @@ import (
 	"github.com/xenolf/lego/acme"
 )
 
+// Config is used to configure the creation of the DNSProvider
 type Config struct {
 	MaxRetries         int
 	Route53TTL         int
 	PropagationTimeout time.Duration
 	PollingInterval    time.Duration
+	HostedZoneID       string
 }
 
 // DNSProvider implements the acme.ChallengeProvider interface
 type DNSProvider struct {
-	client       *route53.Route53
-	hostedZoneID string
-	config       *Config
+	client *route53.Route53
+	config *Config
 }
 
 // customRetryer implements the client.Retryer interface by composing the
@@ -53,12 +54,21 @@ func (d customRetryer) RetryRules(r *request.Request) time.Duration {
 	return time.Duration(delay) * time.Millisecond
 }
 
+// Timeout returns the timeout and interval to use when checking for DNS
+// propagation. Route53 can sometimes take a long time to complete an
+// update, so wait up to 60 minutes for the update to propagate.
+func (r *DNSProvider) Timeout() (timeout, interval time.Duration) {
+	return r.config.PropagationTimeout, r.config.PollingInterval
+}
+
+// NewDefaultConfig returns a default configuration for the DNSProvider
 func NewDefaultConfig() *Config {
 	return &Config{
 		MaxRetries:         5,
 		Route53TTL:         10,
 		PropagationTimeout: time.Minute * 2,
 		PollingInterval:    time.Second * 4,
+		HostedZoneID:       os.Getenv("AWS_HOSTED_ZONE_ID"),
 	}
 }
 
@@ -77,8 +87,6 @@ func NewDefaultConfig() *Config {
 //
 // See also: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk
 func NewDNSProvider(config *Config) (*DNSProvider, error) {
-	hostedZoneID := os.Getenv("AWS_HOSTED_ZONE_ID")
-
 	if config == nil {
 		config = NewDefaultConfig()
 	}
@@ -93,9 +101,8 @@ func NewDNSProvider(config *Config) (*DNSProvider, error) {
 	client := route53.New(session)
 
 	return &DNSProvider{
-		client:       client,
-		hostedZoneID: hostedZoneID,
-		config:       config,
+		client: client,
+		config: config,
 	}, nil
 }
 
@@ -156,8 +163,8 @@ func (r *DNSProvider) changeRecord(action, fqdn, value string, ttl int) error {
 }
 
 func (r *DNSProvider) getHostedZoneID(fqdn string) (string, error) {
-	if r.hostedZoneID != "" {
-		return r.hostedZoneID, nil
+	if r.config.HostedZoneID != "" {
+		return r.config.HostedZoneID, nil
 	}
 
 	authZone, err := acme.FindZoneByFqdn(fqdn, acme.RecursiveNameservers)
